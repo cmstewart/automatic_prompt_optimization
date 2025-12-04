@@ -2,6 +2,7 @@ import argparse, json, os, random, time, pathlib
 from tqdm import tqdm
 
 import optimizers
+import vectorize
 from tasks      import get_task
 from predictors import QA_Generator
 from scorers    import BEMScorer
@@ -11,10 +12,15 @@ from evaluators import get_evaluator, PPOEvaluator, DPOEvaluator
 def parse_args():
     p = argparse.ArgumentParser("ProTeGi prompt search (FinanceBench)")
     p.add_argument("--data_dir", required=True,
-                   help="Folder with dataset_prepared.parquet")
+                   help="Folder with dataset_prepared.parquet for the chosen task")
     p.add_argument("--prompts", required=True,
                    help="Comma-separated list of seed prompt files")
     p.add_argument("--out", default="run_log.txt")
+    p.add_argument("--task", choices=("financebench", "finder", "docfinqa", "findoc"),
+                   default="financebench",
+                   help="Which dataset/task to use")
+    p.add_argument("--ref_dir", default=None,
+                   help="Folder with PDF references (FinanceBench/FinDER/FinDoc). Use optional for DocFinQA.")
     # optimiser hyper-params 
     p.add_argument("--rounds", type=int, default=6)
     p.add_argument("--beam_size", type=int, default=4)
@@ -87,12 +93,15 @@ def main() -> None:
     random.seed(1234)
 
     config = vars(args).copy()
-    config["task"]   = "financebench"
+    config["task"]   = args.task
     config["scorer"] = "bem"
+    config["ref_dir"] = args.ref_dir
     config["eval_budget"] = (args.samples_per_eval * args.eval_rounds * args.eval_prompts_per_round)
     fill_defaults(config)
 
-    task       = get_task("financebench", args.data_dir,
+    vectorize.configure(task=args.task, data_dir=args.data_dir, ref_dir=args.ref_dir)
+
+    task       = get_task(args.task, args.data_dir,
                           max_threads=args.max_threads)
     predictor  = QA_Generator({"temperature": args.temperature,
                                "top_k": args.top_k})
