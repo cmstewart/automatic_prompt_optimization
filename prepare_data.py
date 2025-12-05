@@ -100,8 +100,8 @@ def prepare_docfinqa(out_dir: pathlib.Path):
     train_df = pd.concat([train_df, val_df], ignore_index=True)
     df = pd.concat([train_df, test_df], ignore_index=True)
 
-    question_col = _resolve_col(df, ("question", "query"), "question")
-    answer_col   = _resolve_col(df, ("answer", "answers", "long_answer"), "answer")
+    question_col = _resolve_col(df, ("Question", "query"), "Question")
+    answer_col   = _resolve_col(df, ("Answer", "answers", "long_answer"), "Answer")
     context_col  = _resolve_col(df, ("context", "Context", "context_text", "evidence", "passage"), "context")
 
     df = df.rename(columns={question_col: "question", answer_col: "answer"})

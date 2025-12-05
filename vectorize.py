@@ -25,20 +25,20 @@ assert os.getenv("OPENAI_API_KEY"), "API key not loaded!"
 ROOT = pathlib.Path(r"C:\Users\cypri\Desktop\Master Thesis")
 DEFAULT_DATA_DIRS = {
     "financebench": ROOT / "data" / "FinanceBench",
-    "finder": ROOT / "data" / "FinDER",
-    "docfinqa": ROOT / "data" / "DocFinQA",
-    "findoc": ROOT / "data" / "Findoc",
+    "finder": ROOT / "data" / "Finder",
+    "docfinqa": ROOT / "data" / "DocFinQa",
+    "findoc": ROOT / "data" / "FinDoc",
 }
-FINANCEBENCH_REF = ROOT / "references" / "FinanceBench"
+FINANCEBENCH_REF = ROOT / "references" / "FinanceBenchPdfs"
 FINANCEBENCH_REF.mkdir(parents=True, exist_ok=True)
 DEFAULT_REF_DIRS = {
     "financebench": FINANCEBENCH_REF,
-    "finder": pathlib.Path("YOUR_PATH"),
+    #"finder": pathlib.Path("C:\Users\cypri\Desktop\Master Thesis\references\Finder"),
     "docfinqa": None,
-    "findoc": pathlib.Path("YOUR_PATH"),
+    #"findoc": pathlib.Path("C:\Users\cypri\Desktop\Master Thesis\references\FinDoc"),
 }
-VS_ROOT = ROOT / "vectorstores"
-VS_ROOT.mkdir(parents=True, exist_ok=True)
+FINANCEBENCH_VS = ROOT / "vectorstores"/ "FinanceBench"
+FINANCEBENCH_VS.mkdir(parents=True, exist_ok=True)
 
 VS_CHUNK_SIZE = 1024
 VS_CHUNK_OVERLAP = 30
@@ -50,7 +50,7 @@ _CONFIG: Dict[str, pathlib.Path | str | None] = {
     "data_dir": DEFAULT_DATA_DIRS["financebench"],
     "dataset_path": DEFAULT_DATA_DIRS["financebench"] / "dataset_prepared.parquet",
     "ref_dir": FINANCEBENCH_REF,
-    "vs_dir": VS_ROOT,
+    "vs_dir": FINANCEBENCH_VS,
 }
 _DOC_CONTEXTS: Dict[str, str] | None = None
 # ---------------------------------------------------------------------
@@ -76,7 +76,7 @@ def configure(task: str = "financebench", data_dir: str | os.PathLike | None = N
     if ref_dir_path and "YOUR_PATH" not in str(ref_dir_path):
         ref_dir_path.mkdir(parents=True, exist_ok=True)
 
-    vs_root = pathlib.Path(vs_dir) if vs_dir else VS_ROOT
+    vs_root = pathlib.Path(vs_dir) if vs_dir else FINANCEBENCH_VS
     vs_root.mkdir(parents=True, exist_ok=True)
 
     _CONFIG = {
