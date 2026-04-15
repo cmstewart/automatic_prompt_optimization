@@ -10,17 +10,17 @@ from evaluators import get_evaluator, PPOEvaluator, DPOEvaluator
 
 
 def parse_args():
-    p = argparse.ArgumentParser("ProTeGi prompt search (FinanceBench)")
+    p = argparse.ArgumentParser("ProTeGi prompt search")
     p.add_argument("--data_dir", required=True,
                    help="Folder with dataset_prepared.parquet for the chosen task")
     p.add_argument("--prompts", required=True,
                    help="Comma-separated list of seed prompt files")
     p.add_argument("--out", default="run_log.txt")
-    p.add_argument("--task", choices=("financebench", "finder", "docfinqa", "findoc"),
+    p.add_argument("--task", choices=("financebench", "finder", "docfinqa", "finqa", "findoc"),
                    default="financebench",
                    help="Which dataset/task to use")
     p.add_argument("--ref_dir", default=None,
-                   help="Folder with PDF references (FinanceBench/FinDER/FinDoc). Use optional for DocFinQA.")
+                   help="Folder with PDF references (FinanceBench/FinDER/FinDoc). Optional for DocFinQA/FinQA.")
     # optimiser hyper-params 
     p.add_argument("--rounds", type=int, default=6)
     p.add_argument("--beam_size", type=int, default=4)

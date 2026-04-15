@@ -144,6 +144,10 @@ class DocFinQATask(FinanceBenchTask):
     TEST_SPLITS = ("test",)
 
 
+class FinQATask(FinanceBenchTask):
+    SPLIT_FILE = "finqa_split.json"
+
+
 class FindocTask(FinanceBenchTask):
     SPLIT_FILE = "findoc_split.json"
 
@@ -155,6 +159,7 @@ def get_task(task_name: str, data_root: str, **kw) -> FinanceBenchTask:
         "financebench": FinanceBenchTask,
         "finder": FinderTask,
         "docfinqa": DocFinQATask,
+        "finqa": FinQATask,
         "findoc": FindocTask,
     }
     if name not in mapping:
