@@ -82,7 +82,10 @@ class QA_Generator(GPT4Predictor):
 
         docs   = self.get_retriever(ex["doc_name"]).invoke(ex["question"])
         ctx    = "\n".join(d.page_content for d in docs)
-        filled_prompt = prompt.format(question=ex["question"], context=ctx)
+        safe_prompt = prompt.replace("{question}", "\x00Q\x00").replace("{context}", "\x00C\x00")
+        safe_prompt = safe_prompt.replace("{", "{{").replace("}", "}}")
+        safe_prompt = safe_prompt.replace("\x00Q\x00", "{question}").replace("\x00C\x00", "{context}")
+        filled_prompt = safe_prompt.format(question=ex["question"], context=ctx)
         # print(f"\n[LLM DEBUG] QUESTION:\n{ex['question']}\n", flush=True)
         # print(f"[LLM DEBUG] CONTEXT:\n{ctx}\n", flush=True)
         # print(f"[LLM DEBUG] MESSAGE SENT TO LLM:\n{filled_prompt}\n", flush=True)
