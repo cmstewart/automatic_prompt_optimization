@@ -39,7 +39,8 @@ def chatgpt(prompt, temperature=0.3, n=1, top_p=1, stop=None, max_tokens=1024,
         "logit_bias": logit_bias
     }
     retries = 0
-    while True:
+    max_retries = 20
+    while retries < max_retries:
         try:
             r = requests.post('https://api.openai.com/v1/chat/completions',
                 headers = {
@@ -51,12 +52,12 @@ def chatgpt(prompt, temperature=0.3, n=1, top_p=1, stop=None, max_tokens=1024,
             )
             if r.status_code != 200:
                 retries += 1
-                time.sleep(1)
+                time.sleep(min(2 ** retries, 60))
             else:
                 break
-        except requests.exceptions.ReadTimeout:
-            time.sleep(1)
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
             retries += 1
+            time.sleep(min(2 ** retries, 60))
     r = r.json()
     return [choice['message']['content'] for choice in r['choices']]
 
@@ -71,7 +72,8 @@ def instructGPT_logprobs(prompt, temperature=0.7):
         "echo": True
     }
     retries = 0
-    while True:
+    max_retries = 20
+    while retries < max_retries:
         try:
             r = requests.post('https://api.openai.com/v1/completions',
                 headers = {
@@ -80,14 +82,15 @@ def instructGPT_logprobs(prompt, temperature=0.7):
                 },
                 json = payload,
                 timeout=10
-            )  
+            )
             if r.status_code != 200:
-                time.sleep(2)
                 retries += 1
+                time.sleep(min(2 ** retries, 60))
             else:
                 break
-        except requests.exceptions.ReadTimeout:
-            time.sleep(5)
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
+            retries += 1
+            time.sleep(min(2 ** retries, 60))
     r = r.json()
     return r['choices']
 
