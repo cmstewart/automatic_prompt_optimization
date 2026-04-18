@@ -20,7 +20,7 @@ class GPT4Predictor(ABC):
         pass
 
     def batch_inference(self, examples: List[Dict], prompt: str) -> List[str]:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as pool:
             futures = [
                 pool.submit(self.inference, ex, prompt) for ex in examples
             ]
