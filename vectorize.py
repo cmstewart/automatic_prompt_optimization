@@ -79,7 +79,13 @@ def configure(task: str = "financebench", data_dir: str | os.PathLike | None = N
         "finqa": ROOT / "vectorstores" / "FinQa",
         "findoc": ROOT / "vectorstores" / "FinDoc",
     }
-    vs_root = pathlib.Path(vs_dir) if vs_dir else task_vs_defaults.get(task, FINANCEBENCH_VS)
+    vs_override = os.environ.get("VS_DIR_OVERRIDE")
+    if vs_dir:
+        vs_root = pathlib.Path(vs_dir)
+    elif vs_override:
+        vs_root = pathlib.Path(vs_override)
+    else:
+        vs_root = task_vs_defaults.get(task, FINANCEBENCH_VS)
     vs_root.mkdir(parents=True, exist_ok=True)
 
     _CONFIG = {
