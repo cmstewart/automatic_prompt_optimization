@@ -80,8 +80,12 @@ class QA_Generator(GPT4Predictor):
         if "{question}" not in prompt or "{context}" not in prompt:
             raise KeyError("Prompt must contain {question} and {context} placeholders")
 
-        docs   = self.get_retriever(ex["doc_name"]).invoke(ex["question"])
-        ctx    = "\n".join(d.page_content for d in docs)
+        try:
+            docs = self.get_retriever(ex["doc_name"]).invoke(ex["question"])
+            ctx = "\n".join(d.page_content for d in docs)
+        except Exception as e:
+            print(f"[WARN] retrieval failed for doc={ex.get('doc_name','?')}: {e}", flush=True)
+            return ""
         safe_prompt = prompt.replace("{question}", "\x00Q\x00").replace("{context}", "\x00C\x00")
         safe_prompt = safe_prompt.replace("{", "{{").replace("}", "}}")
         safe_prompt = safe_prompt.replace("\x00Q\x00", "{question}").replace("\x00C\x00", "{context}")
