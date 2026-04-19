@@ -86,9 +86,10 @@ class QA_Generator(GPT4Predictor):
         safe_prompt = safe_prompt.replace("{", "{{").replace("}", "}}")
         safe_prompt = safe_prompt.replace("\x00Q\x00", "{question}").replace("\x00C\x00", "{context}")
         filled_prompt = safe_prompt.format(question=ex["question"], context=ctx)
-        # print(f"\n[LLM DEBUG] QUESTION:\n{ex['question']}\n", flush=True)
-        # print(f"[LLM DEBUG] CONTEXT:\n{ctx}\n", flush=True)
-        # print(f"[LLM DEBUG] MESSAGE SENT TO LLM:\n{filled_prompt}\n", flush=True)
-        answer = utils.chatgpt(filled_prompt, temperature=0.0, n=1, timeout=60)[0]
-        return answer.strip()
+        try:
+            answer = utils.chatgpt(filled_prompt, temperature=0.0, n=1, timeout=60)[0]
+            return answer.strip()
+        except (RuntimeError, Exception) as e:
+            print(f"[WARN] inference failed for doc={ex.get('doc_name','?')}: {e}", flush=True)
+            return ""
 
