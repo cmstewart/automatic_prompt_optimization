@@ -78,7 +78,13 @@ class ProTeGi(PromptOptimizer):
         Wrap each reason with <START> and <END>
         """
         gradient_prompt = "\n".join(line.lstrip() for line in gradient_prompt.split("\n"))
-        res = utils.chatgpt(gradient_prompt, n=n)
+        try:
+            res = utils.chatgpt(gradient_prompt, n=n)
+        except utils.DailyRateLimitError:
+            raise
+        except (RuntimeError, Exception) as e:
+            print(f"[WARN] API call failed: {e}", flush=True)
+            return []
         feedbacks = []
         for r in res:
             feedbacks += self.parse_tagged_text(r, "<START>", "<END>")
@@ -102,7 +108,11 @@ class ProTeGi(PromptOptimizer):
         transformation_prompt = "\n".join(
             line.lstrip() for line in transformation_prompt.split("\n")
         )
-        res = utils.chatgpt(transformation_prompt, n=n)
+        try:
+            res = utils.chatgpt(transformation_prompt, n=n)
+        except (RuntimeError, Exception) as e:
+            print(f"[WARN] apply_gradient API call failed: {e}", flush=True)
+            return []
         new_prompts = []
         for r in res:
             new_prompts += self.parse_tagged_text(r, "<START>", "<END>")
@@ -114,7 +124,13 @@ class ProTeGi(PromptOptimizer):
             "semantic meaning.\n\n"
             f"Input: {prompt_section}\n\nOutput:"
         )
-        out = utils.chatgpt(rewriter_prompt, n=n)
+        try:
+            out = utils.chatgpt(rewriter_prompt, n=n)
+        except utils.DailyRateLimitError:
+            raise
+        except (RuntimeError, Exception) as e:
+            print(f"[WARN] generate_synonyms API call failed: {e}", flush=True)
+            return []
         return [x for x in out if x]
 
     def get_gradients(self, prompt, task_section, examples, preds):

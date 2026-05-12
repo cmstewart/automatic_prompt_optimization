@@ -1,0 +1,11 @@
+langchain>=0.3
+langchain-openai>=0.3
+langchain-community>=0.3
+langchain-text-splitters>=0.3
+chromadb>=1.0
+python-dotenv
+sentence-transformers
+pymupdf
+openai>=1.0
+kagglehub
+tensorflow-hub

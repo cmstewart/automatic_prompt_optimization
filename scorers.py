@@ -111,7 +111,7 @@ class BEMScorer(BaseScorer):
         
 
     def pair_prob(self, pred: str, gold: str, question: str) -> float:
-        encoding = BEM_tokenizer(pred, gold, truncation=True, max_length=512, padding="max_length", return_tensors="tf")
+        encoding = BEM_tokenizer(pred, gold, truncation=True, max_length=512, padding="max_length", return_tensors="pt")
         inputs = {
             "input_ids":tf.cast(encoding["input_ids"], tf.int64),
             "segment_ids": tf.cast(encoding["token_type_ids"], tf.int64),

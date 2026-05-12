@@ -20,11 +20,20 @@ class GPT4Predictor(ABC):
         pass
 
     def batch_inference(self, examples: List[Dict], prompt: str) -> List[str]:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
             futures = [
                 pool.submit(self.inference, ex, prompt) for ex in examples
             ]
-            return [f.result() for f in futures]
+            results = []
+            for f in futures:
+                try:
+                    results.append(f.result())
+                except utils.DailyRateLimitError:
+                    raise
+                except Exception as e:
+                    print(f"[WARN] batch_inference thread failed: {e}", flush=True)
+                    results.append("")
+            return results
 
 
 # Binary Predictor kept just in case
@@ -80,9 +89,22 @@ class QA_Generator(GPT4Predictor):
         if "{question}" not in prompt or "{context}" not in prompt:
             raise KeyError("Prompt must contain {question} and {context} placeholders")
 
-        docs   = self.get_retriever(ex["doc_name"]).invoke(ex["question"])
-        ctx    = "\n".join(d.page_content for d in docs)
-        filled_prompt = prompt.format(question=ex["question"], context=ctx)
-        answer = utils.chatgpt(filled_prompt, temperature=0.0, n=1, timeout=15)[0]
-        return answer.strip()
+        try:
+            docs = self.get_retriever(ex["doc_name"]).invoke(ex["question"])
+            ctx = "\n".join(d.page_content for d in docs)
+        except Exception as e:
+            print(f"[WARN] retrieval failed for doc={ex.get('doc_name','?')}: {e}", flush=True)
+            return ""
+        safe_prompt = prompt.replace("{question}", "\x00Q\x00").replace("{context}", "\x00C\x00")
+        safe_prompt = safe_prompt.replace("{", "{{").replace("}", "}}")
+        safe_prompt = safe_prompt.replace("\x00Q\x00", "{question}").replace("\x00C\x00", "{context}")
+        filled_prompt = safe_prompt.format(question=ex["question"], context=ctx)
+        try:
+            answer = utils.chatgpt(filled_prompt, temperature=0.0, n=1, timeout=60)[0]
+            return answer.strip()
+        except utils.DailyRateLimitError:
+            raise
+        except (RuntimeError, Exception) as e:
+            print(f"[WARN] inference failed for doc={ex.get('doc_name','?')}: {e}", flush=True)
+            return ""
 

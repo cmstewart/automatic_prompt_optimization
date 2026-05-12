@@ -1,0 +1,29 @@
+{"data_dir": "/content/drive/MyDrive/Pubs/Articles/Automatic Prompt Optimization with RAG/Experiments/data/FinQa", "prompts": "/content/drive/MyDrive/Pubs/Articles/Automatic Prompt Optimization with RAG/Experiments/prompts/basic.txt", "out": "/content/drive/MyDrive/Pubs/Articles/Automatic Prompt Optimization with RAG/Experiments/results/E20_finqa_ppo.txt", "task": "finqa", "ref_dir": null, "rounds": 6, "beam_size": 4, "eval_rounds": 2, "eval_prompts_per_round": 2, "samples_per_eval": 24, "evaluator": "ppo", "temperature": 0.0, "top_k": 1, "max_threads": 4, "n_test_exs": null, "ppo_hidden": 64, "ppo_lr": 0.002, "ppo_gamma": 0.99, "ppo_log_history": false, "dpo_beta": 0.1, "dpo_lr": 0.0003, "dpo_hidden": 128, "dpo_margin": 0.0, "dpo_reference_free": false, "dpo_gpt_judge": false, "test_seed": null, "n_test_ratio": 0.2, "scorer": "bem", "eval_budget": 96, "n_gradients": 2, "errors_per_gradient": 4, "gradients_per_error": 5, "steps_per_gradient": 3, "mc_samples_per_step": 2, "minibatch_size": 16, "max_expansion_factor": 32, "c": 1.0}
+======== ROUND 0
+89.46s
+[0.08333333333333333]
+[0.08157099697885196]
+======== ROUND 1
+362.42s
+[0.035796552896499634, 0.03547084704041481, 0.03479252755641937, 0.034615419805049896]
+[0.03625377643504532, 0.04229607250755287, 0.03625377643504532, 0.021148036253776436]
+======== ROUND 2
+945.18s
+[0.01118105836212635, 0.010887378826737404, 0.01070552971214056, 0.01052016206085682]
+[0.07250755287009064, 0.03625377643504532, 0.03625377643504532, 0.03625377643504532]
+======== ROUND 3
+1040.92s
+[0.011294756084680557, 0.011225543916225433, 0.010543664917349815, 0.009957115165889263]
+[0.030211480362537766, 0.0513595166163142, 0.054380664652567974, 0.06948640483383686]
+======== ROUND 4
+1154.68s
+[0.014709665440022945, 0.010802853852510452, 0.010528151877224445, 0.010503437370061874]
+[0.09969788519637462, 0.09969788519637462, 0.06948640483383686, 0.08157099697885196]
+======== ROUND 5
+2466.38s
+[0.011538046412169933, 0.010496746748685837, 0.010163232684135437, 0.010117295198142529]
+[0.07250755287009064, 0.09365558912386707, 0.09365558912386707, 0.0755287009063444]
+======== ROUND 6
+1458.66s
+[0.010791342705488205, 0.010786471888422966, 0.010493984445929527, 0.010004905052483082]
+[0.1268882175226586, 0.0755287009063444, 0.09969788519637462, 0.10876132930513595]

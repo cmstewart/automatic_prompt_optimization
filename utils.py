@@ -1,9 +1,16 @@
 
-import time
-import requests
-import config
 import string
-import os
+
+import openai
+from openai import OpenAI
+
+client = OpenAI(max_retries=5)
+
+
+class DailyRateLimitError(Exception):
+    """Raised when the daily request limit is exhausted."""
+    pass
+
 
 def parse_sectioned_prompt(s):
 
@@ -24,73 +31,33 @@ def parse_sectioned_prompt(s):
     return result
 
 
-def chatgpt(prompt, temperature=0.3, n=1, top_p=1, stop=None, max_tokens=1024, 
-                  presence_penalty=0, frequency_penalty=0, logit_bias={}, timeout=10):
-    messages = [{"role": "user", "content": prompt}]
-    payload = {
-        "messages": messages,
-        "model": "gpt-4o-mini",
-        "temperature": temperature,
-        "n": n,
-        "top_p": top_p,
-        "stop": stop,
-        "max_tokens": max_tokens,
-        "presence_penalty": presence_penalty,
-        "frequency_penalty": frequency_penalty,
-        "logit_bias": logit_bias
-    }
-    retries = 0
-    while True:
-        try:
-            r = requests.post('https://api.openai.com/v1/chat/completions',
-                headers = {
-                    "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', getattr(config, 'OPENAI_KEY', ''))}",
-                    "Content-Type": "application/json"
-                },
-                json = payload,
-                timeout=timeout
-            )
-            if r.status_code != 200:
-                retries += 1
-                time.sleep(1)
-            else:
-                break
-        except requests.exceptions.ReadTimeout:
-            time.sleep(1)
-            retries += 1
-    r = r.json()
-    return [choice['message']['content'] for choice in r['choices']]
-
-
-def instructGPT_logprobs(prompt, temperature=0.7):
-    payload = {
-        "prompt": prompt,
-        "model": "text-davinci-003",
-        "temperature": temperature,
-        "max_tokens": 1,
-        "logprobs": 1,
-        "echo": True
-    }
-    retries = 0
-    while True:
-        try:
-            r = requests.post('https://api.openai.com/v1/completions',
-                headers = {
-                    "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', getattr(config, 'OPENAI_KEY', ''))}",
-                    "Content-Type": "application/json"
-                },
-                json = payload,
-                timeout=10
-            )  
-            if r.status_code != 200:
-                time.sleep(2)
-                retries += 1
-            else:
-                break
-        except requests.exceptions.ReadTimeout:
-            time.sleep(5)
-    r = r.json()
-    return r['choices']
+def chatgpt(prompt, temperature=0.3, n=1, top_p=1, stop=None, max_tokens=1024,
+                  presence_penalty=0, frequency_penalty=0, logit_bias={}, timeout=60):
+    """Call the OpenAI chat completions API and return a list of response strings."""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+            n=n,
+            top_p=top_p,
+            stop=stop,
+            max_tokens=max_tokens,
+            presence_penalty=presence_penalty,
+            frequency_penalty=frequency_penalty,
+            logit_bias=logit_bias,
+            timeout=timeout,
+        )
+        return [choice.message.content for choice in response.choices]
+    except openai.RateLimitError as e:
+        msg = str(e)
+        if "RPD" in msg or "requests per day" in msg:
+            raise DailyRateLimitError(msg) from e
+        print(f"Warning: OpenAI rate limit (non-daily): {e}")
+        return [""]
+    except (openai.APIError, openai.APIConnectionError) as e:
+        print(f"Warning: OpenAI API call failed: {e}")
+        return [""]
 
 
 def wrap_prompt(prompt: str) -> str:

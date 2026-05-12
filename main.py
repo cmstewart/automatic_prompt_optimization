@@ -1,21 +1,29 @@
-import argparse, json, os, random, time, pathlib
+import argparse, json, os, random, time, pathlib, pickle, hashlib
 from tqdm import tqdm
 
 import optimizers
+import vectorize
 from tasks      import get_task
 from predictors import QA_Generator
 from scorers    import BEMScorer
 from evaluators import get_evaluator, PPOEvaluator, DPOEvaluator
+from paths      import ROOT
+from utils      import DailyRateLimitError
 
 
 def parse_args():
-    p = argparse.ArgumentParser("ProTeGi prompt search (FinanceBench)")
+    p = argparse.ArgumentParser("ProTeGi prompt search")
     p.add_argument("--data_dir", required=True,
-                   help="Folder with dataset_prepared.parquet")
+                   help="Folder with dataset_prepared.parquet for the chosen task")
     p.add_argument("--prompts", required=True,
                    help="Comma-separated list of seed prompt files")
-    p.add_argument("--out", default="run_log.txt")
-    # optimiser hyper-params 
+    p.add_argument("--out", default=str(ROOT / "results" / "run_log.txt"))
+    p.add_argument("--task", choices=("financebench", "finqa", "findoc"),
+                   default="financebench",
+                   help="Which dataset/task to use")
+    p.add_argument("--ref_dir", default=None,
+                   help="Folder with PDF references (FinanceBench) or markdown (FinDoc-RAG). Optional for FinQA.")
+    # optimiser hyper-params
     p.add_argument("--rounds", type=int, default=6)
     p.add_argument("--beam_size", type=int, default=4)
     p.add_argument("--eval_rounds", type=int, default=6)
@@ -36,7 +44,7 @@ def parse_args():
     p.add_argument("--ppo_gamma",  type=float, default=0.99)
     p.add_argument("--ppo_log_history", action="store_true",
                     help="Keep a list of per-mini-batch rewards inside PPOEvaluator for later plotting.")
-    
+
     # DPO-specific options (ignored unless --evaluator dpo)
     p.add_argument("--dpo_beta", type=float, default=0.1,
                    help="β temperature for DPO loss")
@@ -47,14 +55,14 @@ def parse_args():
     p.add_argument("--dpo_margin", type=float, default=0.0,
                    help="min BEM gap to form a preference pair")
     p.add_argument("--dpo_reference_free", action="store_true",
-                   help="run IPO (no ref‐model KL term)")
+                   help="run IPO (no ref-model KL term)")
     p.add_argument("--dpo_gpt_judge", action="store_true",
-                   help="use predictor.judge_is_better() on near‐ties")
+                   help="use predictor.judge_is_better() on near-ties")
     p.add_argument("--test_seed", type=int, default=None,
                help="Seed for random test subset; omit for different each run")
     p.add_argument("--n_test_ratio", type=float, default=0.20,
-               help="If --n_test_exs is not set, sample this fraction of the test set per run (0–1].")
-    
+               help="If --n_test_exs is not set, sample this fraction of the test set per run (0-1].")
+
 
 
 
@@ -82,17 +90,70 @@ def fill_defaults(cfg: dict):
         cfg.setdefault(k, v)
 
 
+def _checkpoint_path(args):
+    """Return the checkpoint file path for this experiment."""
+    return args.out + ".checkpoint.pkl"
+
+
+def _save_checkpoint(args, round_idx, candidates, scores, evaluator, ppo_round_offsets):
+    """Save experiment state after a completed round."""
+    ckpt = {
+        "round_idx": round_idx,
+        "candidates": list(candidates),
+        "scores": list(scores),
+        "evaluator_type": args.evaluator,
+    }
+
+    if args.evaluator == "ppo":
+        ckpt["ppo_rewards_history"] = list(getattr(evaluator, "rewards_history", []))
+        ckpt["ppo_rewards_full_history"] = list(getattr(evaluator, "rewards_full_history", []))
+        ckpt["ppo_round_offsets"] = list(ppo_round_offsets) if ppo_round_offsets is not None else None
+
+    elif args.evaluator == "dpo":
+        import torch
+        # Save the full DPO model state dict and optimizer state dict.
+        ckpt["dpo_state_dict"] = evaluator.dpo.policy.state_dict()
+        ckpt["dpo_optimizer_state_dict"] = evaluator.dpo.optimizer.state_dict()
+        ckpt["dpo_ref_logits"] = evaluator.dpo._ref_logits
+        ckpt["dpo_history"] = evaluator.history
+
+    path = _checkpoint_path(args)
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
+        pickle.dump(ckpt, f)
+    os.replace(tmp, path)
+
+
+def _load_checkpoint(args):
+    """Load checkpoint if it exists, otherwise return None."""
+    path = _checkpoint_path(args)
+    if not os.path.exists(path):
+        return None
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+
+def _delete_checkpoint(args):
+    """Remove checkpoint file after successful completion."""
+    path = _checkpoint_path(args)
+    if os.path.exists(path):
+        os.remove(path)
+
+
 def main() -> None:
     args   = parse_args()
     random.seed(1234)
 
     config = vars(args).copy()
-    config["task"]   = "financebench"
+    config["task"]   = args.task
     config["scorer"] = "bem"
+    config["ref_dir"] = args.ref_dir
     config["eval_budget"] = (args.samples_per_eval * args.eval_rounds * args.eval_prompts_per_round)
     fill_defaults(config)
 
-    task       = get_task("financebench", args.data_dir,
+    vectorize.configure(task=args.task, data_dir=args.data_dir, ref_dir=args.ref_dir)
+
+    task       = get_task(args.task, args.data_dir,
                           max_threads=args.max_threads)
     predictor  = QA_Generator({"temperature": args.temperature,
                                "top_k": args.top_k})
@@ -105,8 +166,8 @@ def main() -> None:
                                  ppo_lr = args.ppo_lr,
                                  ppo_gamma = args.ppo_gamma,
                                  log_history = args.ppo_log_history)
-        
-    elif args.evaluator == "dpo":                      
+
+    elif args.evaluator == "dpo":
         evaluator = DPOEvaluator(eval_rounds = args.eval_rounds,
                                  samples_per_eval = args.samples_per_eval,
                                  dpo_hidden = args.dpo_hidden,
@@ -114,7 +175,7 @@ def main() -> None:
                                  dpo_beta = args.dpo_beta,
                                  dpo_margin = args.dpo_margin,
                                  reference_free = args.dpo_reference_free)
-       
+
 
     else:
         evaluator  = get_evaluator(args.evaluator)(config)
@@ -125,8 +186,13 @@ def main() -> None:
     train_exs  = task.get_train_examples()
     test_exs   = task.get_test_examples()
 
-    # Draw the test subset once per run (fixed across rounds)
-    rng = random.Random(args.test_seed) if args.test_seed is not None else random.Random()
+    # Draw the test subset once per run (fixed across rounds).
+    # If no test_seed is provided, derive a deterministic one from the output
+    # path so that resumed runs draw the same subset.
+    test_seed = args.test_seed
+    if test_seed is None:
+        test_seed = int(hashlib.sha256(args.out.encode()).hexdigest(), 16) % (2**31)
+    rng = random.Random(test_seed)
 
     if args.n_test_exs is not None:
         k = min(args.n_test_exs, len(test_exs))
@@ -137,98 +203,130 @@ def main() -> None:
 
     test_subset = rng.sample(test_exs, k=k)
 
+    # Check for an existing checkpoint to resume from.
+    ckpt = _load_checkpoint(args)
+    start_round = 0
 
+    if ckpt is not None:
+        start_round = ckpt["round_idx"] + 1
+        candidates = ckpt["candidates"]
+        # Restore evaluator-specific state.
+        if args.evaluator == "ppo" and ckpt.get("evaluator_type") == "ppo":
+            evaluator.rewards_history = ckpt.get("ppo_rewards_history", [])
+            evaluator.rewards_full_history = ckpt.get("ppo_rewards_full_history", [])
+        elif args.evaluator == "dpo" and ckpt.get("evaluator_type") == "dpo":
+            import torch
+            from DPO import DPO
+            # Resize the policy to match the saved state, then load weights.
+            saved_logits = ckpt["dpo_state_dict"]["logits"]
+            n_actions = saved_logits.numel()
+            if evaluator.dpo.policy.logits.numel() != n_actions:
+                evaluator.dpo = DPO(
+                    n_actions=n_actions,
+                    beta=evaluator.dpo.beta,
+                    lr=evaluator.dpo.optimizer.param_groups[0]["lr"],
+                    reference_free=evaluator.dpo.reference_free,
+                )
+            evaluator.dpo.policy.load_state_dict(ckpt["dpo_state_dict"])
+            evaluator.dpo.optimizer.load_state_dict(ckpt["dpo_optimizer_state_dict"])
+            evaluator.dpo._ref_logits = ckpt.get("dpo_ref_logits")
+            evaluator.history = ckpt.get("dpo_history", evaluator.history)
 
-    # prepare output file 
-    if os.path.exists(args.out):
-        os.remove(args.out)
-    with open(args.out, "a") as f:
-        f.write(json.dumps(config) + "\n")
+        print(f"Resuming from round {start_round}")
+    else:
+        # Fresh start: prepare output file (truncate if it exists).
+        pathlib.Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        if os.path.exists(args.out):
+            os.remove(args.out)
+        with open(args.out, "a") as f:
+            f.write(json.dumps(config) + "\n")
 
-    # seed prompts 
-    candidates = load_prompts(args.prompts)
+        # seed prompts
+        candidates = load_prompts(args.prompts)
 
     # Track where each round ends in the flat rewards list
     ppo_round_offsets = None
     if args.evaluator == "ppo" and args.ppo_log_history:
-        ppo_round_offsets = [0]  # index 0 = start of round 0 in rewards_history
+        if ckpt is not None and ckpt.get("ppo_round_offsets") is not None:
+            ppo_round_offsets = ckpt["ppo_round_offsets"]
+        else:
+            ppo_round_offsets = [0]  # index 0 = start of round 0 in rewards_history
 
 
 
 
-    # optimisation loop 
-    for round_idx in tqdm(range(config["rounds"] + 1), desc="round"):
-        start = time.time()
+    # optimisation loop
+    try:
+        for round_idx in tqdm(range(start_round, config["rounds"] + 1), desc="round"):
+            start = time.time()
 
-        # expand
-        if round_idx > 0:
-            candidates = optimiser.expand_candidates(candidates, task, predictor, train_exs)
+            # expand
+            if round_idx > 0:
+                candidates = optimiser.expand_candidates(candidates, task, predictor, train_exs)
 
-        # score
-        scores = optimiser.score_candidates(candidates, task, predictor, train_exs)
-        scores, candidates = zip(*sorted(zip(scores, candidates), reverse=True))
-        scores, candidates = list(scores), list(candidates)
+            # score
+            scores = optimiser.score_candidates(candidates, task, predictor, train_exs)
+            scores, candidates = zip(*sorted(zip(scores, candidates), reverse=True))
+            scores, candidates = list(scores), list(candidates)
 
-        # after 'scores = optimiser.score_candidates(...)' and the metrics write,
-        # just before the block that writes the PPO *.json files:
-        if ppo_round_offsets is not None:
-            ppo_round_offsets.append(len(getattr(evaluator, "rewards_history", [])))
+            if ppo_round_offsets is not None:
+                ppo_round_offsets.append(len(getattr(evaluator, "rewards_history", [])))
 
+            # select candidates
+            candidates = candidates[: config["beam_size"]]
+            scores = scores[: config["beam_size"]]
 
+            #  record candidates, estimated scores, and true scores
+            with open(args.out, "a") as f:
+                f.write(f"======== ROUND {round_idx}\n")
+                f.write(f"{time.time() - start:.2f}s\n")
+                f.write(json.dumps(scores) + "\n")
 
-        # select candidates
-        candidates = candidates[: config["beam_size"]]
-        scores = scores[: config["beam_size"]]
+            metrics = []
+            for candidate in candidates:
+                accuracy = task.evaluate(predictor, candidate, test_subset, n=None)
+                metrics.append(accuracy)
+            with open(args.out, "a") as f:
+                f.write(json.dumps(metrics) + "\n")
 
-        #  record candidates, estimated scores, and true scores
-        with open(args.out, "a") as f:
-            f.write(f"======== ROUND {round_idx}\n")
-            f.write(f"{time.time() - start:.2f}s\n")
-            f.write(json.dumps(scores) + "\n")
-
-        metrics = []
-        for candidate in candidates:
-            accuracy = task.evaluate(predictor, candidate, test_subset, n=None)
-            metrics.append(accuracy)
-        with open(args.out, "a") as f:
-            f.write(json.dumps(metrics) + "\n")
-
-            if args.evaluator == "ppo" and args.ppo_log_history:
-                # flat per-step means
-                pathlib.Path(args.out + ".ppo_rewards.json").write_text(
-                    json.dumps(getattr(evaluator, "rewards_history", []))
-                )
-                # full per-example hits per step
-                pathlib.Path(args.out + ".ppo_rewards_full.json").write_text(
-                    json.dumps(getattr(evaluator, "rewards_full_history", []))
-                )
-                # round boundaries
-                pathlib.Path(args.out + ".ppo_round_offsets.json").write_text(
-                    json.dumps(ppo_round_offsets)
-                )
-                # by-round (means)
-                r = getattr(evaluator, "rewards_history", [])
-                by_round = [r[ppo_round_offsets[i]:ppo_round_offsets[i+1]]
-                            for i in range(len(ppo_round_offsets)-1)]
-                pathlib.Path(args.out + ".ppo_rewards_by_round.json").write_text(
-                    json.dumps(by_round)
-                )
-                # optional: by-round (full per-example vectors)
-                rf = getattr(evaluator, "rewards_full_history", [])
-                by_round_full = [rf[ppo_round_offsets[i]:ppo_round_offsets[i+1]]
+                if args.evaluator == "ppo" and args.ppo_log_history:
+                    pathlib.Path(args.out + ".ppo_rewards.json").write_text(
+                        json.dumps(getattr(evaluator, "rewards_history", []))
+                    )
+                    pathlib.Path(args.out + ".ppo_rewards_full.json").write_text(
+                        json.dumps(getattr(evaluator, "rewards_full_history", []))
+                    )
+                    pathlib.Path(args.out + ".ppo_round_offsets.json").write_text(
+                        json.dumps(ppo_round_offsets)
+                    )
+                    r = getattr(evaluator, "rewards_history", [])
+                    by_round = [r[ppo_round_offsets[i]:ppo_round_offsets[i+1]]
                                 for i in range(len(ppo_round_offsets)-1)]
-                pathlib.Path(args.out + ".ppo_rewards_full_by_round.json").write_text(
-                    json.dumps(by_round_full)
-                )
-            if args.evaluator == "dpo":
-                        # Write the running DPO history dict as JSON
-                pathlib.Path(args.out + ".dpo_history.json").write_text(
-                json.dumps(getattr(evaluator, "history", {}))
-                        )
+                    pathlib.Path(args.out + ".ppo_rewards_by_round.json").write_text(
+                        json.dumps(by_round)
+                    )
+                    rf = getattr(evaluator, "rewards_full_history", [])
+                    by_round_full = [rf[ppo_round_offsets[i]:ppo_round_offsets[i+1]]
+                                    for i in range(len(ppo_round_offsets)-1)]
+                    pathlib.Path(args.out + ".ppo_rewards_full_by_round.json").write_text(
+                        json.dumps(by_round_full)
+                    )
+                if args.evaluator == "dpo":
+                    pathlib.Path(args.out + ".dpo_history.json").write_text(
+                        json.dumps(getattr(evaluator, "history", {}))
+                    )
 
-            
+            # Save checkpoint after each completed round.
+            _save_checkpoint(args, round_idx, candidates, scores, evaluator, ppo_round_offsets)
 
+    except DailyRateLimitError as e:
+        print(f"\nDaily rate limit reached. Saving checkpoint and exiting.")
+        print(f"Resume this experiment by re-running the same command.")
+        _save_checkpoint(args, round_idx - 1, candidates, scores, evaluator, ppo_round_offsets)
+        raise SystemExit(2)
 
+    # Experiment completed successfully. Remove checkpoint.
+    _delete_checkpoint(args)
 
     print("\nSearch finished. Best prompt:\n")
     print(candidates[0])

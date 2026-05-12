@@ -14,6 +14,8 @@ from collections import Counter
 from tqdm import tqdm
 
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
@@ -24,15 +26,16 @@ from dotenv import load_dotenv
 # LOCAL IMPORTS
 # ----------------------------------------------------------------------
 from scorers import BEMScorer     # reuse shared implementation
+from paths import ROOT
 
 # ----------------------------------------------------------------------
 # CONFIG PATHS
 # ----------------------------------------------------------------------
 load_dotenv()
 
-ROOT     = pathlib.Path(r"C:\Users\cypri\Desktop\Master Thesis")
 ANSWERS  = ROOT / "results" / "answers.jsonl"
 GRADES   = ROOT / "results" / "grades_ce.jsonl"
+PLOT_PATH = ROOT / "results" / "verdict_distribution.png"
 
 # ----------------------------------------------------------------------
 # CLI
@@ -134,7 +137,10 @@ def main():
     plt.title(f"Verdict distribution ({args.metric.upper()})")
     plt.ylabel("Count")
     plt.tight_layout()
-    plt.show()
+    PLOT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(PLOT_PATH)
+    plt.close()
+    print(f"Plot saved to {PLOT_PATH}")
 
     total = len(graded)
     acc = counts.get("CORRECT", 0) / total if total else 0.0
