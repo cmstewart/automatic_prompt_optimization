@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Run the remaining FinQA experiments (E22-E27) sequentially on a GCP VM.
+"""Run FinQA experiments sequentially on a GCP VM.
 
 Usage:
     export APO_ROOT=~/experiments
     export OPENAI_API_KEY=sk-...
     cd ~/APO
+
+    # Run all experiments:
     python run_experiments.py
+
+    # Run specific experiments only:
+    python run_experiments.py E20 E22 E25
 
 The script checks each experiment's output file for completion (7 ROUND
 entries) and skips any that are already done. Safe to re-run after a crash.
@@ -25,55 +30,14 @@ APO_ROOT = pathlib.Path(os.environ.get("APO_ROOT", os.path.expanduser("~/experim
 MAX_THREADS = int(os.environ.get("MAX_THREADS", "8"))
 EXPECTED_ROUNDS = 7  # rounds 0 through 6
 
-EXPERIMENTS = [
-    {
-        "id": "E22",
-        "evaluator": "ucb",
-        "samples_per_eval": 36,
-        "eval_rounds": 4,
-        "eval_prompts_per_round": 4,
-        "top_k": 3,
-    },
-    {
-        "id": "E23",
-        "evaluator": "ppo",
-        "samples_per_eval": 36,
-        "eval_rounds": 4,
-        "eval_prompts_per_round": 4,
-        "top_k": 3,
-    },
-    {
-        "id": "E24",
-        "evaluator": "dpo",
-        "samples_per_eval": 36,
-        "eval_rounds": 4,
-        "eval_prompts_per_round": 4,
-        "top_k": 3,
-    },
-    {
-        "id": "E25",
-        "evaluator": "ucb",
-        "samples_per_eval": 48,
-        "eval_rounds": 8,
-        "eval_prompts_per_round": 8,
-        "top_k": 6,
-    },
-    {
-        "id": "E26",
-        "evaluator": "ppo",
-        "samples_per_eval": 48,
-        "eval_rounds": 8,
-        "eval_prompts_per_round": 8,
-        "top_k": 6,
-    },
-    {
-        "id": "E27",
-        "evaluator": "dpo",
-        "samples_per_eval": 48,
-        "eval_rounds": 8,
-        "eval_prompts_per_round": 8,
-        "top_k": 6,
-    },
+ALL_EXPERIMENTS = [
+    {"id": "E20", "evaluator": "ppo", "samples_per_eval": 24, "eval_rounds": 2, "eval_prompts_per_round": 2, "top_k": 1},
+    {"id": "E22", "evaluator": "ucb", "samples_per_eval": 36, "eval_rounds": 4, "eval_prompts_per_round": 4, "top_k": 3},
+    {"id": "E23", "evaluator": "ppo", "samples_per_eval": 36, "eval_rounds": 4, "eval_prompts_per_round": 4, "top_k": 3},
+    {"id": "E24", "evaluator": "dpo", "samples_per_eval": 36, "eval_rounds": 4, "eval_prompts_per_round": 4, "top_k": 3},
+    {"id": "E25", "evaluator": "ucb", "samples_per_eval": 48, "eval_rounds": 8, "eval_prompts_per_round": 8, "top_k": 6},
+    {"id": "E26", "evaluator": "ppo", "samples_per_eval": 48, "eval_rounds": 8, "eval_prompts_per_round": 8, "top_k": 6},
+    {"id": "E27", "evaluator": "dpo", "samples_per_eval": 48, "eval_rounds": 8, "eval_prompts_per_round": 8, "top_k": 6},
 ]
 
 
@@ -118,6 +82,19 @@ def run_experiment(exp: dict, data_dir: str, prompt_file: str, out_path: str) ->
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    # Filter experiments if IDs are provided on the command line.
+    requested_ids = set(sys.argv[1:]) if len(sys.argv) > 1 else None
+    if requested_ids:
+        experiments = [e for e in ALL_EXPERIMENTS if e["id"] in requested_ids]
+        unknown = requested_ids - {e["id"] for e in ALL_EXPERIMENTS}
+        if unknown:
+            print(f"WARNING: Unknown experiment IDs: {unknown}")
+        if not experiments:
+            print("ERROR: No valid experiment IDs provided.")
+            sys.exit(1)
+    else:
+        experiments = ALL_EXPERIMENTS
+
     data_dir = str(APO_ROOT / "data" / "FinQa")
     prompt_file = str(APO_ROOT / "prompts" / "basic.txt")
 
@@ -134,14 +111,14 @@ def main() -> None:
 
     print(f"APO_ROOT    : {APO_ROOT}")
     print(f"MAX_THREADS : {MAX_THREADS}")
-    print(f"Experiments : {len(EXPERIMENTS)}")
+    print(f"Experiments : {[e['id'] for e in experiments]}")
     print()
 
     completed = 0
     skipped = 0
     failed = 0
 
-    for exp in EXPERIMENTS:
+    for exp in experiments:
         out_path = str(APO_ROOT / "results" / f"{exp['id']}_finqa_{exp['evaluator']}.txt")
         rounds_done = count_rounds(pathlib.Path(out_path))
 
