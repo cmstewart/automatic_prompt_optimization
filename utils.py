@@ -12,6 +12,11 @@ class DailyRateLimitError(Exception):
     pass
 
 
+class QuotaExhaustedError(Exception):
+    """Raised when the API account has no remaining credits."""
+    pass
+
+
 def parse_sectioned_prompt(s):
 
     result = {}
@@ -53,6 +58,8 @@ def chatgpt(prompt, temperature=0.3, n=1, top_p=1, stop=None, max_tokens=1024,
         msg = str(e)
         if "RPD" in msg or "requests per day" in msg:
             raise DailyRateLimitError(msg) from e
+        if "insufficient_quota" in msg or "exceeded your current quota" in msg:
+            raise QuotaExhaustedError(msg) from e
         print(f"Warning: OpenAI rate limit (non-daily): {e}")
         return [""]
     except (openai.APIError, openai.APIConnectionError) as e:

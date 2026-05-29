@@ -8,7 +8,7 @@ from predictors import QA_Generator
 from scorers    import BEMScorer
 from evaluators import get_evaluator, PPOEvaluator, DPOEvaluator
 from paths      import ROOT
-from utils      import DailyRateLimitError
+from utils      import DailyRateLimitError, QuotaExhaustedError
 
 
 def parse_args():
@@ -324,6 +324,11 @@ def main() -> None:
         print(f"Resume this experiment by re-running the same command.")
         _save_checkpoint(args, round_idx - 1, candidates, scores, evaluator, ppo_round_offsets)
         raise SystemExit(2)
+    except QuotaExhaustedError as e:
+        print(f"\nAPI quota exhausted (no credits remaining). Saving checkpoint and exiting.")
+        print(f"Add credits to the OpenAI account, then re-run.")
+        _save_checkpoint(args, round_idx - 1, candidates, scores, evaluator, ppo_round_offsets)
+        raise SystemExit(3)
 
     # Experiment completed successfully. Remove checkpoint.
     _delete_checkpoint(args)

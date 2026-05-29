@@ -99,6 +99,8 @@ def run_experiment(dataset_cfg, evaluator, budget_cfg, seed, out_path) -> str:
     result = subprocess.run(cmd, env=env)
     if result.returncode == 2:
         return "rate_limited"
+    if result.returncode == 3:
+        return "quota_exhausted"
     return "success" if result.returncode == 0 else "failed"
 
 
@@ -193,6 +195,10 @@ def main() -> None:
         if result == "rate_limited":
             print(f"\nRATE LIMITED during {label} after {elapsed / 60:.1f} min.")
             print("Daily request limit reached. Re-run this script after the limit resets.")
+            break
+        elif result == "quota_exhausted":
+            print(f"\nQUOTA EXHAUSTED during {label} after {elapsed / 60:.1f} min.")
+            print("No API credits remaining. Add credits and re-run.")
             break
         elif result == "success":
             completed += 1
