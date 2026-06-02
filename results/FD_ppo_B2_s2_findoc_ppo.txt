@@ -1,0 +1,29 @@
+{"data_dir": "/home/cstewm/experiments/data/FinDoc", "prompts": "/home/cstewm/experiments/prompts/basic.txt", "out": "/home/cstewm/experiments/results/FD_ppo_B2_s2_findoc_ppo.txt", "task": "findoc", "ref_dir": null, "rounds": 6, "beam_size": 4, "eval_rounds": 4, "eval_prompts_per_round": 4, "samples_per_eval": 36, "evaluator": "ppo", "temperature": 0.0, "top_k": 3, "max_threads": 8, "n_test_exs": null, "ppo_hidden": 64, "ppo_lr": 0.002, "ppo_gamma": 0.99, "ppo_log_history": false, "dpo_beta": 0.1, "dpo_lr": 0.0003, "dpo_hidden": 128, "dpo_margin": 0.0, "dpo_reference_free": false, "dpo_gpt_judge": false, "test_seed": 2, "n_test_ratio": 0.2, "scorer": "bem", "eval_budget": 576, "n_gradients": 2, "errors_per_gradient": 4, "gradients_per_error": 5, "steps_per_gradient": 3, "mc_samples_per_step": 2, "minibatch_size": 16, "max_expansion_factor": 32, "c": 1.0}
+======== ROUND 0
+27.78s
+[0.6388888888888888]
+[0.52]
+======== ROUND 1
+235.40s
+[0.05397512763738632, 0.03984982892870903, 0.039711304008960724, 0.038088008761405945]
+[0.56, 0.56, 0.48, 0.48]
+======== ROUND 2
+841.73s
+[0.01838385872542858, 0.01154172234237194, 0.011457914486527443, 0.010949544608592987]
+[0.48, 0.64, 0.52, 0.48]
+======== ROUND 3
+764.93s
+[0.013686390593647957, 0.012205604463815689, 0.011642117984592915, 0.011612806469202042]
+[0.52, 0.48, 0.52, 0.56]
+======== ROUND 4
+840.20s
+[0.018193615600466728, 0.012002110481262207, 0.011173893697559834, 0.011112814769148827]
+[0.48, 0.52, 0.52, 0.52]
+======== ROUND 5
+940.95s
+[0.022023526951670647, 0.012124808505177498, 0.011953870765864849, 0.011721049435436726]
+[0.56, 0.56, 0.52, 0.52]
+======== ROUND 6
+832.45s
+[0.021438203752040863, 0.012587370350956917, 0.012284807860851288, 0.012128078378736973]
+[0.48, 0.56, 0.56, 0.56]

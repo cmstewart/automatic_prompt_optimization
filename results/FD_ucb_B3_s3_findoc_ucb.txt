@@ -1,0 +1,29 @@
+{"data_dir": "/home/cstewm/experiments/data/FinDoc", "prompts": "/home/cstewm/experiments/prompts/basic.txt", "out": "/home/cstewm/experiments/results/FD_ucb_B3_s3_findoc_ucb.txt", "task": "findoc", "ref_dir": null, "rounds": 6, "beam_size": 4, "eval_rounds": 8, "eval_prompts_per_round": 8, "samples_per_eval": 48, "evaluator": "ucb", "temperature": 0.0, "top_k": 6, "max_threads": 8, "n_test_exs": null, "ppo_hidden": 64, "ppo_lr": 0.002, "ppo_gamma": 0.99, "ppo_log_history": false, "dpo_beta": 0.1, "dpo_lr": 0.0003, "dpo_hidden": 128, "dpo_margin": 0.0, "dpo_reference_free": false, "dpo_gpt_judge": false, "test_seed": 3, "n_test_ratio": 0.2, "scorer": "bem", "eval_budget": 3072, "n_gradients": 2, "errors_per_gradient": 4, "gradients_per_error": 5, "steps_per_gradient": 3, "mc_samples_per_step": 2, "minibatch_size": 16, "max_expansion_factor": 32, "c": 1.0}
+======== ROUND 0
+38.73s
+[0.625]
+[0.72]
+======== ROUND 1
+2360.17s
+[0.7916666666666666, 0.7708333333333334, 0.7638888888888888, 0.75]
+[0.72, 0.72, 0.72, 0.72]
+======== ROUND 2
+2950.51s
+[0.7916666666666666, 0.78125, 0.7708333333333334, 0.7708333333333334]
+[0.72, 0.68, 0.72, 0.76]
+======== ROUND 3
+3128.68s
+[0.875, 0.875, 0.8541666666666666, 0.8333333333333334]
+[0.68, 0.68, 0.72, 0.68]
+======== ROUND 4
+3149.94s
+[0.8541666666666666, 0.8333333333333334, 0.8333333333333334, 0.8333333333333334]
+[0.68, 0.72, 0.64, 0.68]
+======== ROUND 5
+3316.45s
+[0.8333333333333334, 0.8125, 0.8125, 0.8125]
+[0.76, 0.6, 0.72, 0.72]
+======== ROUND 6
+3825.35s
+[0.8333333333333334, 0.8333333333333334, 0.8125, 0.8125]
+[0.68, 0.68, 0.72, 0.68]
