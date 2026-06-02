@@ -1,0 +1,29 @@
+{"data_dir": "/home/cstewm/experiments/data/FinQa", "prompts": "/home/cstewm/experiments/prompts/basic.txt", "out": "/home/cstewm/experiments/results/FQ_ucb_B1_s1_finqa_ucb.txt", "task": "finqa", "ref_dir": null, "rounds": 6, "beam_size": 4, "eval_rounds": 2, "eval_prompts_per_round": 2, "samples_per_eval": 24, "evaluator": "ucb", "temperature": 0.0, "top_k": 1, "max_threads": 8, "n_test_exs": null, "ppo_hidden": 64, "ppo_lr": 0.002, "ppo_gamma": 0.99, "ppo_log_history": false, "dpo_beta": 0.1, "dpo_lr": 0.0003, "dpo_hidden": 128, "dpo_margin": 0.0, "dpo_reference_free": false, "dpo_gpt_judge": false, "test_seed": 1, "n_test_ratio": 0.2, "scorer": "bem", "eval_budget": 96, "n_gradients": 2, "errors_per_gradient": 4, "gradients_per_error": 5, "steps_per_gradient": 3, "mc_samples_per_step": 2, "minibatch_size": 16, "max_expansion_factor": 32, "c": 1.0}
+======== ROUND 0
+36.72s
+[0.041666666666666664]
+[0.16314199395770393]
+======== ROUND 1
+267.18s
+[0.22916666666666666, 0.20833333333333334, 0.0, 0.0]
+[0.17522658610271905, 0.18429003021148035, 0.17220543806646527, 0.16012084592145015]
+======== ROUND 2
+776.30s
+[0.4375, 0.2708333333333333, 0.0, 0.0]
+[0.36253776435045315, 0.17522658610271905, 0.13897280966767372, 0.16012084592145015]
+======== ROUND 3
+1350.02s
+[0.1875, 0.125, 0.0, 0.0]
+[0.1903323262839879, 0.10574018126888217, 0.16012084592145015, 0.14501510574018128]
+======== ROUND 4
+639.59s
+[0.20833333333333334, 0.125, 0.0, 0.0]
+[0.2054380664652568, 0.16012084592145015, 0.17522658610271905, 0.14501510574018128]
+======== ROUND 5
+639.45s
+[0.16666666666666666, 0.14583333333333334, 0.0, 0.0]
+[0.19939577039274925, 0.16012084592145015, 0.15709969788519637, 0.13293051359516617]
+======== ROUND 6
+753.17s
+[0.125, 0.10416666666666667, 0.0, 0.0]
+[0.2326283987915408, 0.1691842900302115, 0.16012084592145015, 0.13897280966767372]
