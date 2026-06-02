@@ -1,0 +1,29 @@
+{"data_dir": "/home/cstewm/experiments/data/FinanceBench", "prompts": "/home/cstewm/experiments/prompts/basic.txt", "out": "/home/cstewm/experiments/results/FB_ppo_B1_s4_financebench_ppo.txt", "task": "financebench", "ref_dir": null, "rounds": 6, "beam_size": 4, "eval_rounds": 2, "eval_prompts_per_round": 2, "samples_per_eval": 24, "evaluator": "ppo", "temperature": 0.0, "top_k": 1, "max_threads": 8, "n_test_exs": null, "ppo_hidden": 64, "ppo_lr": 0.002, "ppo_gamma": 0.99, "ppo_log_history": false, "dpo_beta": 0.1, "dpo_lr": 0.0003, "dpo_hidden": 128, "dpo_margin": 0.0, "dpo_reference_free": false, "dpo_gpt_judge": false, "test_seed": 4, "n_test_ratio": 0.2, "scorer": "bem", "eval_budget": 96, "n_gradients": 2, "errors_per_gradient": 4, "gradients_per_error": 5, "steps_per_gradient": 3, "mc_samples_per_step": 2, "minibatch_size": 16, "max_expansion_factor": 32, "c": 1.0}
+======== ROUND 0
+23.10s
+[0.25]
+[0.0]
+======== ROUND 1
+217.84s
+[0.04404643923044205, 0.04256628453731537, 0.03816058486700058, 0.03783850371837616]
+[0.0, 0.0, 0.16666666666666666, 0.0]
+======== ROUND 2
+850.14s
+[0.010467537678778172, 0.010447606444358826, 0.010138371028006077, 0.010044519789516926]
+[0.0, 0.16666666666666666, 0.0, 0.0]
+======== ROUND 3
+772.05s
+[0.016232982277870178, 0.010516644455492496, 0.010388659313321114, 0.010378912091255188]
+[0.16666666666666666, 0.16666666666666666, 0.0, 0.0]
+======== ROUND 4
+649.15s
+[0.010657311417162418, 0.010546039789915085, 0.010525369085371494, 0.010290601290762424]
+[0.0, 0.0, 0.0, 0.0]
+======== ROUND 5
+613.99s
+[0.01019031461328268, 0.010020613670349121, 0.00996801070868969, 0.009959137998521328]
+[0.16666666666666666, 0.0, 0.0, 0.0]
+======== ROUND 6
+815.52s
+[0.01174331083893776, 0.011540059931576252, 0.010995974764227867, 0.010874774307012558]
+[0.0, 0.0, 0.0, 0.16666666666666666]
