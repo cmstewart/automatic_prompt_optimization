@@ -24,11 +24,11 @@ See [analysis.ipynb](analysis.ipynb) for the full analysis with charts and table
 |---|---|---|---|
 | FinanceBench | Tied (all ~30%) | Tied (all ~33%) | Tied (all ~40%) |
 | FinDoc-RAG | UCB (49.6%) | Tied (~61%) | UCB (72.0%) |
-| FinQA | DPO (35.1%) | UCB (49.8%) | DPO (39.3%) |
+| FinQA | DPO (35.1%) | UCB (49.8%) | UCB (49.8%) |
 
 ## Takeaway
 
-Automatic prompt optimization reliably improves financial QA accuracy (up to +28 percentage points on FinQA, up to +23 on FinanceBench, up to +14 on FinDoc-RAG). No single evaluator strategy wins everywhere: UCB is the safest general choice, but DPO can outperform it on specific datasets. The evaluation budget you allocate matters at least as much as which strategy you pick.
+Automatic prompt optimization reliably improves financial QA accuracy (up to +28 percentage points on FinQA, up to +23 on FinanceBench, up to +14 on FinDoc-RAG). No single evaluator strategy wins everywhere: UCB is the safest general choice, particularly on larger datasets, but all three evaluators converge to similar performance on smaller benchmarks. The evaluation budget you allocate matters at least as much as which strategy you pick.
 
 ## Contents
 
